@@ -121,7 +121,7 @@ int main(int argc,char **argv)
 
 
     int flag;
-	
+
 	/*
     int help_flag = 0;
     int version_flag = 0;
@@ -267,7 +267,7 @@ int main(int argc,char **argv)
             return -1;
         }
 
-	if(create_test_hosts_file(&test_parameters,host_names))		
+	if(create_test_hosts_file(&test_parameters,host_names))
 	{
 		printf("Can not to create file with name \"%s_hosts.txt\"\n",test_parameters.file_name_prefix);
     		MPI_Abort(MPI_COMM_WORLD,-1);
@@ -337,7 +337,7 @@ int main(int argc,char **argv)
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    
+
 
     /*
      * Circle by length of messages
@@ -392,9 +392,9 @@ int main(int argc,char **argv)
                 test_noise_blocking
 		        (
 		 	        times,
-		    	    tmp_mes_size, 
-			        test_parameters.num_repeats, 
-			        test_parameters.num_noise_messages, 
+		    	    tmp_mes_size,
+			        test_parameters.num_repeats,
+			        test_parameters.num_noise_messages,
 			        test_parameters.noise_message_length,
 		       	    test_parameters.num_noise_procs
 		        );
@@ -403,16 +403,16 @@ int main(int argc,char **argv)
             	test_noise
 			    (
     			 	times,
-    				tmp_mes_size, 
-    				test_parameters.num_repeats, 
-    				test_parameters.num_noise_messages, 
+    				tmp_mes_size,
+    				test_parameters.num_repeats,
+    				test_parameters.num_noise_messages,
     				test_parameters.noise_message_length,
     				test_parameters.num_noise_procs
     			);
                 break;
         }
 
-        /* FIXME: need function to calc statistics 
+        /* FIXME: need function to calc statistics
         calculate_statistics(times);
         */
 
@@ -421,12 +421,6 @@ int main(int argc,char **argv)
         FILE *fout;
         char fname[100];
         fname[0] = '\0';
-
-        for (i = 0; i < comm_size; ++i) {
-            for (j = 0; j < test_parameters.num_repeats; ++j) {
-                printf("results[%d][%d] in process %d = %e: after calc in main func\n", i, j, comm_rank, results[i][j]);
-            }
-        }
 
         int rep;
         sprintf(fname, "%d-%d-results.txt", tmp_mes_size, comm_rank);
@@ -439,7 +433,7 @@ int main(int argc,char **argv)
             fprintf(fout, "\n");
         }
         fclose(fout);
-       
+
         if(comm_rank==0)
         {
 
@@ -505,16 +499,16 @@ int main(int argc,char **argv)
                      MPI_My_time_struct,
                      0,
                      100,
-                     MPI_COMM_WORLD);      
+                     MPI_COMM_WORLD);
         }
 
-      
+
         /* end for cycle .
          * Now we  go to the next length of message that is used in
          * the test perfomed on multiprocessor.
          */
     }
-    
+
     /* TODO
      * Now free times array.
      * It should be changed in future for memory be allocated only once.

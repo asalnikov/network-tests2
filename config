@@ -1,0 +1,41 @@
+#
+# Alexey Salnikov
+#
+PARUS_VERSION=2.0.1
+INSTALL_DIR=/home/algor/network_tests-2.0.1
+#INSTALL_DIR=$(HOME)/network_tests-$(PARUS_VERSION)
+MPI_HOME=
+MPI_cc=mpicc
+MPI_CC=mpicxx
+MPI_CLINKER=$(MPI_cc)
+MPI_CCLINKER=$(MPI_CC)
+MPI_LIB_PATH= 
+MPI_LIBS= 
+MPI_cc_INCLUDE=
+MPI_CC_INCLUDE=$(MPI_cc_INCLUDE)
+MPI_cc_FLAGS= -g -O2
+MPI_CC_FLAGS= -g -O2
+MPI_CLINKER_FLAGS=
+MPI_CCLINKER_FLAGS=
+NETCDF_INCLUDE=
+CC=gcc
+CCC=g++
+CC_FLAGS= -g -O2
+CCC_FLAGS= -g -O2
+CC_INCLUDE= 
+CCC_INCLUDE= $(CC_INCLUDE)
+CLINKER=$(CC)
+CCLINKER=$(CCC)
+CLINKER_FLAGS=
+CCLINKER_FLAGS=
+LIB_PATH=
+LIBS=
+ANT=ant
+JAVAC=javac
+JAR=jar
+
+# full path to 'CL/opencl.h' (on Windows/UNIX) or 'OpenCL/opencl.h' (on Mac)
+# (WITHOUT 'CL/opencl.h' or 'OpenCL/opencl.h'!)
+OPENCL_INCL=
+# full path to OpenCL library (for example, '/usr/lib')
+OPENCL_LIB_FLD=

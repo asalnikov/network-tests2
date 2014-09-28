@@ -33,13 +33,13 @@
 extern int comm_rank;
 extern int comm_size;
 
-Test_time_result_type real_one_to_one(px_my_time_type *results, 
+Test_time_result_type real_one_to_one(px_my_time_type *results,
                                       int mes_length,
                                       int num_repeats,
                                       int source_proc,
                                       int dest_proc);
 
-int one_to_one(px_my_time_type **results, 
+int one_to_one(px_my_time_type **results,
                Test_time_result_type *times,
                int mes_length,
                int num_repeats)
@@ -60,7 +60,7 @@ int one_to_one(px_my_time_type **results,
     }
 
 
-    
+
     if(comm_rank==0)
     {
         for(i=0; i<comm_size*comm_size; i++)
@@ -86,7 +86,7 @@ int one_to_one(px_my_time_type **results,
             }
             if(send_proc==0)
             {
-                real_one_to_one(tmp_results, 
+                real_one_to_one(tmp_results,
                                 mes_length,
                                 num_repeats,
                                 send_proc,
@@ -114,11 +114,11 @@ int one_to_one(px_my_time_type **results,
             MPI_Recv(pair,2,MPI_INT,0,1,MPI_COMM_WORLD,&status);
             send_proc=pair[0];
             recv_proc=pair[1];
-            
+
 	    if(send_proc==-1)
                 break;
             if(send_proc==comm_rank)
-                real_one_to_one(tmp_results, 
+                real_one_to_one(tmp_results,
                                 mes_length,
                                 num_repeats,
                                 send_proc,
@@ -135,18 +135,13 @@ int one_to_one(px_my_time_type **results,
         }
     } /* end else comm_rank==0 */
     int j;
-    for (i = 0; i < comm_size; ++i) {
-        for (j = 0; j < num_repeats; ++j) {
-            printf("results[%d][%d] in process %d = %e: after calc in calc func\n", i, j, comm_rank, results[i][j]);
-        }
-    }
 
     free(tmp_results);
     return 0;
 } /* end one_to_one */
 
 
-Test_time_result_type real_one_to_one(px_my_time_type *results, 
+Test_time_result_type real_one_to_one(px_my_time_type *results,
                                       int mes_length,
                                       int num_repeats,
                                       int source_proc,
@@ -200,11 +195,6 @@ Test_time_result_type real_one_to_one(px_my_time_type *results,
             MPI_Recv(&tmp,1,MPI_INT,dest_proc,100,MPI_COMM_WORLD,&status);
 
             results[i]=(time_end-time_beg);
-            printf("proc %d: results[%d][%d] = %e - %e\n", comm_rank, source_proc, i, results[i], time_end, time_beg);
-            /*
-             printf("process %d from %d:\n  Finished recive message length=%d from %d throug the time %ld\n",
-             comm_rank,comm_size,mes_length,i,tmp_results[i]);
-            */
         }
         if(comm_rank==dest_proc)
         {
@@ -225,10 +215,6 @@ Test_time_result_type real_one_to_one(px_my_time_type *results,
             results[i]=(time_end-time_beg);
 
             MPI_Send(&comm_rank,1,MPI_INT,source_proc,100,MPI_COMM_WORLD);
-            /*
-             printf("process %d from %d:\n  Finished recive message length=%d from %d throug the time %ld\n",
-             comm_rank,comm_size,mes_length,finished,times[finished]);
-            */
         }
     }
 

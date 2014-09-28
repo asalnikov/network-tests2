@@ -23,6 +23,7 @@
 #include "my_time.h"
 #include "my_malloc.h"
 #include "tests_common.h"
+#include "../logger/logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -149,10 +150,6 @@ int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_
             MPI_Waitany(comm_size,recv_request,&finished,&status);
             time_end=px_my_cpu_time();
             results[finished][i]=time_end-time_beg;
-            /*
-             printf("process %d from %d:\n  Finished recive message length=%d from %d throug the time %ld\n",
-             comm_rank,comm_size,mes_length,finished,times[finished]);
-            */
         }
     }
 
