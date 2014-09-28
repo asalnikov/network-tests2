@@ -67,6 +67,7 @@ int main(int argc,char **argv)
 {
     MPI_Status status;
 
+    px_my_time_type **results = NULL;
     Test_time_result_type *times=NULL; /* old px_my_time_type *times=NULL;*/
 
     /*
@@ -156,6 +157,7 @@ int main(int argc,char **argv)
         }
 
         if(parse_network_test_arguments(argc,argv,&test_parameters))
+
         {
             MPI_Abort(MPI_COMM_WORLD,-1);
             return -1;
@@ -347,74 +349,100 @@ int main(int argc,char **argv)
 	     step_num++,tmp_mes_size+=test_parameters.step_length
 	     )
     {
-        if(test_parameters.test_type==ALL_TO_ALL_TEST_TYPE)
-        {
-            all_to_all(times,tmp_mes_size,test_parameters.num_repeats);
+        results = (px_my_time_type **)malloc(comm_size * sizeof(*results));
+        if (results == NULL) {
+            // освободить всё
+            return -1;
         }
-        if(test_parameters.test_type==BCAST_TEST_TYPE)
-        {
-            bcast(times,tmp_mes_size,test_parameters.num_repeats);
+        char is_error = 0;
+        for (i = 0; i < comm_size; ++i) {
+            results[i] = (px_my_time_type *)malloc(test_parameters.num_repeats * sizeof(*results[i]));
+            if (results[i] == 0) {
+                is_error = 1;
+            }
+        }
+        if (is_error) {
+            // освободить всё
+            return -1;
         }
 
-        if(test_parameters.test_type==NOISE_BLOCKING_TEST_TYPE)
-        {
+        switch (test_parameters.test_type) {
+            case ALL_TO_ALL_TEST_TYPE:
+                all_to_all(results, times, tmp_mes_size, test_parameters.num_repeats);
+                break;
+            case BCAST_TEST_TYPE:
+                bcast(results, times, tmp_mes_size, test_parameters.num_repeats);
+                break;
+            case ONE_TO_ONE_TEST_TYPE:
+                one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                break;
+            case ASYNC_ONE_TO_ONE_TEST_TYPE:
+                async_one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                break;
+            case SEND_RECV_AND_RECV_SEND_TEST_TYPE:
+                send_recv_and_recv_send(results, times, tmp_mes_size, test_parameters.num_repeats);
+                break;
+            case PUT_ONE_TO_ONE_TEST_TYPE:
+                put_one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                break;
+            case GET_ONE_TO_ONE_TEST_TYPE:
+                get_one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                break;
+            case NOISE_BLOCKING_TEST_TYPE:
                 test_noise_blocking
-		(
-		 	times,
-		    	tmp_mes_size, 
-			test_parameters.num_repeats, 
-			test_parameters.num_noise_messages, 
-			test_parameters.noise_message_length,
-		       	test_parameters.num_noise_procs
-		);
+		        (
+		 	        times,
+		    	    tmp_mes_size, 
+			        test_parameters.num_repeats, 
+			        test_parameters.num_noise_messages, 
+			        test_parameters.noise_message_length,
+		       	    test_parameters.num_noise_procs
+		        );
+                break;
+            case NOISE_TEST_TYPE:
+            	test_noise
+			    (
+    			 	times,
+    				tmp_mes_size, 
+    				test_parameters.num_repeats, 
+    				test_parameters.num_noise_messages, 
+    				test_parameters.noise_message_length,
+    				test_parameters.num_noise_procs
+    			);
+                break;
         }
 
-        if(test_parameters.test_type==NOISE_TEST_TYPE)
-        {
-            		test_noise
-			(
-			 	times,
-				tmp_mes_size, 
-				test_parameters.num_repeats, 
-				test_parameters.num_noise_messages, 
-				test_parameters.noise_message_length,
-				test_parameters.num_noise_procs
-			);
-        }
-
-        if(test_parameters.test_type==ONE_TO_ONE_TEST_TYPE)
-        {
-            one_to_one(times,tmp_mes_size,test_parameters.num_repeats);
-        } /* end one_to_one */
-
-        if(test_parameters.test_type==ASYNC_ONE_TO_ONE_TEST_TYPE)
-        {
-            async_one_to_one(times,tmp_mes_size,test_parameters.num_repeats);
-        } /* end async_one_to_one */
-
-        if(test_parameters.test_type==SEND_RECV_AND_RECV_SEND_TEST_TYPE)
-        {
-            send_recv_and_recv_send(times,tmp_mes_size,test_parameters.num_repeats);
-        } /* end send_recv_and_recv_send */
-
-
-
-
-        if(test_parameters.test_type==PUT_ONE_TO_ONE_TEST_TYPE)
-        {
-		put_one_to_one(times,tmp_mes_size,test_parameters.num_repeats);
-        } /* end put_one_to_one */
-
-        if(test_parameters.test_type==GET_ONE_TO_ONE_TEST_TYPE)
-        {
-		get_one_to_one(times,tmp_mes_size,test_parameters.num_repeats);
-        } /* end get_one_to_one */
-
+        /* FIXME: need function to calc statistics 
+        calculate_statistics(times);
+        */
 
         MPI_Barrier(MPI_COMM_WORLD);
 
+        FILE *fout;
+        char fname[100];
+        fname[0] = '\0';
+
+        for (i = 0; i < comm_size; ++i) {
+            for (j = 0; j < test_parameters.num_repeats; ++j) {
+                printf("results[%d][%d] in process %d = %e: after calc in main func\n", i, j, comm_rank, results[i][j]);
+            }
+        }
+
+        int rep;
+        sprintf(fname, "%d-%d-results.txt", tmp_mes_size, comm_rank);
+        fout = fopen(fname, "w");
+        for(j=0; j<comm_size; j++)
+        {
+            for (rep = 0; rep < test_parameters.num_repeats; ++rep) {
+                fprintf(fout, "%e ", results[j][rep]);
+            }
+            fprintf(fout, "\n");
+        }
+        fclose(fout);
+       
         if(comm_rank==0)
         {
+
             for(j=0; j<comm_size; j++)
             {
                 MATRIX_FILL_ELEMENT(mtr_av,0,j,times[j].average);
@@ -472,7 +500,12 @@ int main(int argc,char **argv)
         } /* end comm rank 0 */
         else
         {
-            MPI_Send(times,comm_size,MPI_My_time_struct,0,100,MPI_COMM_WORLD);
+            MPI_Send(times,
+                     comm_size,
+                     MPI_My_time_struct,
+                     0,
+                     100,
+                     MPI_COMM_WORLD);      
         }
 
       
@@ -489,8 +522,12 @@ int main(int argc,char **argv)
      * Times array should be moved from return value to the input argument
      * for any network_test.
      */
-    
+    for (i = 0; i < comm_size; ++i) {
+        free(results[i]);
+    }
+    free(results);
 	free(times);
+
 
 
 	if(comm_rank==0)

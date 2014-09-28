@@ -32,11 +32,10 @@
 extern int comm_rank;
 extern int comm_size;
 
-int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats);
+int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_length, int num_repeats);
 
-int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
+int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_length, int num_repeats)
 {
-    px_my_time_type **tmp_results=NULL;
     px_my_time_type time_beg,time_end;
     char **send_data=NULL;
     char **recv_data=NULL;
@@ -50,18 +49,10 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
     double sum;
 
 
-    tmp_results=(px_my_time_type**)malloc(comm_size*sizeof(px_my_time_type*));
-    if(tmp_results==NULL)
-    {
-        free(times);
-        return -1;
-    }
-
     send_request=(MPI_Request *)malloc(comm_size*sizeof(MPI_Request));
     if(send_request == NULL)
     {
         free(times);
-        free(tmp_results);
         return -1;
     }
 
@@ -69,7 +60,6 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
     if(recv_request == NULL)
     {
         free(times);
-        free(tmp_results);
         free(send_request);
         return -1;
     }
@@ -77,7 +67,6 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
     if(send_data == NULL)
     {
         free(times);
-        free(tmp_results);
         free(send_request);
         free(recv_request);
         return -1;
@@ -86,7 +75,6 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
     if(recv_data == NULL)
     {
         free(times);
-        free(tmp_results);
         free(send_request);
         free(recv_request);
         free(send_data);
@@ -98,13 +86,6 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
     {
         send_data[i]=NULL;
         recv_data[i]=NULL;
-        tmp_results[i]=NULL;
-
-        tmp_results[i]=(px_my_time_type *)malloc(num_repeats*sizeof(px_my_time_type));
-        if(tmp_results[i]==NULL)
-        {
-            flag=1;
-        }
 
         send_data[i]=(char *)malloc(mes_length*sizeof(char));
         if(send_data[i]==NULL)
@@ -128,11 +109,9 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
         {
             if(send_data[i]!=NULL)   free(send_data[i]);
             if(recv_data[i]!=NULL)   free(recv_data[i]);
-            if(tmp_results[i]!=NULL) free(tmp_results[i]);
         }
         free(send_data);
         free(recv_data);
-        free(tmp_results);
         return -1;
     }
 
@@ -169,7 +148,7 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
         {
             MPI_Waitany(comm_size,recv_request,&finished,&status);
             time_end=px_my_cpu_time();
-            tmp_results[finished][i]=time_end-time_beg;
+            results[finished][i]=time_end-time_beg;
             /*
              printf("process %d from %d:\n  Finished recive message length=%d from %d throug the time %ld\n",
              comm_rank,comm_size,mes_length,finished,times[finished]);
@@ -182,22 +161,22 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
         sum=0;
         for(j=0; j<num_repeats; j++)
         {
-            sum+=tmp_results[i][j];
+            sum+=results[i][j];
         }
         times[i].average=sum/(double)num_repeats;
 
         st_deviation=0;
         for(j=0; j<num_repeats; j++)
         {
-            st_deviation+=(tmp_results[i][j]-times[i].average)*(tmp_results[i][j]-times[i].average);
+            st_deviation+=(results[i][j]-times[i].average)*(results[i][j]-times[i].average);
         }
         st_deviation/=(double)(num_repeats);
         times[i].deviation=sqrt(st_deviation);
 
-        qsort(tmp_results[i], num_repeats, sizeof(px_my_time_type), my_time_cmp );
-        times[i].median=tmp_results[i][num_repeats/2];
+        qsort(results[i], num_repeats, sizeof(px_my_time_type), my_time_cmp );
+        times[i].median=results[i][num_repeats/2];
 
-        times[i].min=tmp_results[i][0];
+        times[i].min=results[i][0];
 
 
     }
@@ -208,11 +187,9 @@ int all_to_all(Test_time_result_type *times,int mes_length,int num_repeats)
     {
         if(send_data[i]!=NULL)  free(send_data[i]);
         if(recv_data[i]!=NULL)  free(recv_data[i]);
-        if(tmp_results[i]!=NULL) free(tmp_results[i]);
     }
     free(send_data);
     free(recv_data);
-    free(tmp_results);
 
     return 0;
 }

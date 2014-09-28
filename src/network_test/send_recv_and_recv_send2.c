@@ -33,9 +33,16 @@
 extern int comm_rank;
 extern int comm_size;
 
-Test_time_result_type real_send_recv_and_recv_send(int mes_length,int num_repeats,int source_proc,int dest_proc);
+Test_time_result_type real_send_recv_and_recv_send(px_my_time_type *results,
+                                                   int mes_length,
+                                                   int num_repeats,
+                                                   int source_proc,
+                                                   int dest_proc);
 
-int send_recv_and_recv_send(Test_time_result_type* times,int mes_length,int num_repeats)
+int send_recv_and_recv_send(px_my_time_type **results,
+                            Test_time_result_type* times,
+                            int mes_length,
+                            int num_repeats)
 {
     int i;
     int pair[2];
@@ -45,6 +52,12 @@ int send_recv_and_recv_send(Test_time_result_type* times,int mes_length,int num_
     int send_proc,recv_proc;
 
     MPI_Status status;
+
+    px_my_time_type *tmp_results = NULL;
+    tmp_results = (px_my_time_type *) malloc(num_repeats * sizeof(*tmp_results));
+    if (tmp_results == NULL) {
+        return -1;
+    }
 
     if(comm_rank==0)
     {
@@ -63,11 +76,19 @@ int send_recv_and_recv_send(Test_time_result_type* times,int mes_length,int num_
 
             if(recv_proc==0)
             {
-                times[send_proc]=real_send_recv_and_recv_send(mes_length,num_repeats,send_proc,recv_proc);
+                times[send_proc]=real_send_recv_and_recv_send(results[send_proc],
+                                                              mes_length,
+                                                              num_repeats,
+                                                              send_proc,
+                                                              recv_proc);
             }
             if(send_proc==0)
             {
-                real_send_recv_and_recv_send(mes_length,num_repeats,send_proc,recv_proc);
+                real_send_recv_and_recv_send(tmp_results,
+                                             mes_length,
+                                             num_repeats,
+                                             send_proc,
+                                             recv_proc);
             }
             if(send_proc)
             {
@@ -98,9 +119,17 @@ int send_recv_and_recv_send(Test_time_result_type* times,int mes_length,int num_
             }
 
             if(send_proc==comm_rank)
-                real_send_recv_and_recv_send(mes_length,num_repeats,send_proc,recv_proc);
+                real_send_recv_and_recv_send(tmp_results,
+                                             mes_length,
+                                             num_repeats,
+                                             send_proc,
+                                             recv_proc);
             if(recv_proc==comm_rank)
-                times[send_proc]=real_send_recv_and_recv_send(mes_length,num_repeats,send_proc,recv_proc);
+                times[send_proc]=real_send_recv_and_recv_send(results[send_proc],
+                                                              mes_length,
+                                                              num_repeats,
+                                                              send_proc,
+                                                              recv_proc);
 
             confirmation_flag=1;
             MPI_Send(&confirmation_flag,1,MPI_INT,0,1,MPI_COMM_WORLD);
@@ -108,16 +137,20 @@ int send_recv_and_recv_send(Test_time_result_type* times,int mes_length,int num_
 
     } /* end else comm_rank==0 */
 
+    free(tmp_results);
     return 0;
 } /* end send_recv_and_recv_send */
 
 
 
-Test_time_result_type real_send_recv_and_recv_send(int mes_length,int num_repeats,int source_proc,int dest_proc)
+Test_time_result_type real_send_recv_and_recv_send(px_my_time_type *results, 
+                                                   int mes_length,
+                                                   int num_repeats,
+                                                   int source_proc,
+                                                   int dest_proc)
 {
     px_my_time_type time_beg,time_end;
     char *data=NULL;
-    px_my_time_type *tmp_results=NULL;
     MPI_Status status;
     int i;
     px_my_time_type sum;
@@ -132,18 +165,9 @@ Test_time_result_type real_send_recv_and_recv_send(int mes_length,int num_repeat
         return times;
     }
 
-    tmp_results=(px_my_time_type *)malloc(num_repeats*sizeof(px_my_time_type));
-    if(tmp_results==NULL)
-    {
-        printf("proc %d from %d: Can not allocate memory\n",comm_rank,comm_size);
-        times.average=-1;
-        return times;
-    }
-
     data=(char *)malloc(mes_length*sizeof(char));
     if(data==NULL)
     {
-        free(tmp_results);
         printf("proc %d from %d: Can not allocate memory\n",comm_rank,comm_size);
         times.average=-1;
         return times;
@@ -178,7 +202,7 @@ Test_time_result_type real_send_recv_and_recv_send(int mes_length,int num_repeat
 
             time_end=px_my_cpu_time();
 
-            tmp_results[i]=(time_end-time_beg);
+            results[i]=(time_end-time_beg);
             /*
              printf("process %d from %d:\n  Finished recive message length=%d from %d throug the time %ld\n",
              comm_rank,comm_size,mes_length,finished,times[finished]);
@@ -211,7 +235,7 @@ Test_time_result_type real_send_recv_and_recv_send(int mes_length,int num_repeat
 
 
             time_end=px_my_cpu_time();
-            tmp_results[i]=(time_end-time_beg);
+            results[i]=(time_end-time_beg);
             /*
              printf("process %d from %d:\n  Finished recive message length=%d from %d throug the time %ld\n",
              comm_rank,comm_size,mes_length,finished,times[finished]);
@@ -223,25 +247,24 @@ Test_time_result_type real_send_recv_and_recv_send(int mes_length,int num_repeat
     sum=0;
     for(i=0; i<num_repeats; i++)
     {
-        sum+=tmp_results[i];
+        sum+=results[i];
     }
     times.average=(sum/(double)(num_repeats*2));
 
     st_deviation=0;
     for(i=0; i<num_repeats; i++)
     {
-        st_deviation+=(tmp_results[i]-times.average)*(tmp_results[i]-times.average);
+        st_deviation+=(results[i]-times.average)*(results[i]-times.average);
     }
     st_deviation/=(double)(num_repeats)*4;
     times.deviation=sqrt(st_deviation);
 
-    qsort(tmp_results, num_repeats, sizeof(px_my_time_type), my_time_cmp );
-    times.median=tmp_results[num_repeats/2];
+    qsort(results, num_repeats, sizeof(px_my_time_type), my_time_cmp );
+    times.median=results[num_repeats/2];
 
-    times.min=tmp_results[0];
+    times.min=results[0];
 
     free(data);
-    free(tmp_results);
 
     if((comm_rank==source_proc)||(comm_rank==dest_proc)) return times;
     else
