@@ -293,7 +293,7 @@ int main(int argc,char **argv)
         printf("\tresult file median\t\t\"%s_median.nc\"\n",test_parameters.file_name_prefix);
         printf("\tresult file deviation\t\t\"%s_deviation.nc\"\n",test_parameters.file_name_prefix);
         printf("\tresult file minimum\t\t\"%s_min.nc\"\n",test_parameters.file_name_prefix);
-	printf("\tresult file hosts\t\t\"%s_hosts.txt\"\n\n",test_parameters.file_name_prefix);
+	    printf("\tresult file hosts\t\t\"%s_hosts.txt\"\n\n",test_parameters.file_name_prefix);
 
 
     } /* End preparation (only in MPI process with rank 0) */
@@ -351,21 +351,13 @@ int main(int argc,char **argv)
     {
         results = (px_my_time_type **)malloc(comm_size * sizeof(*results));
         if (results == NULL) {
-            // освободить всё
             return -1;
         }
-        char is_error = 0;
         for (i = 0; i < comm_size; ++i) {
             results[i] = (px_my_time_type *)malloc(test_parameters.num_repeats * sizeof(*results[i]));
-            if (results[i] == 0) {
-                is_error = 1;
-            }
-        }
-        if (is_error) {
-            // освободить всё
-            return -1;
         }
 
+#ifndef MODULES_SUPPORTING
         switch (test_parameters.test_type) {
             case ALL_TO_ALL_TEST_TYPE:
                 all_to_all(results, times, tmp_mes_size, test_parameters.num_repeats);
@@ -411,11 +403,9 @@ int main(int argc,char **argv)
     			);
                 break;
         }
+#endif
 
-        /* FIXME: need function to calc statistics
-        calculate_statistics(times);
-        */
-
+        calculate_statistics(results, times, comm_size, test_parameters.num_repeats);
         MPI_Barrier(MPI_COMM_WORLD);
 
         FILE *fout;
@@ -503,6 +493,10 @@ int main(int argc,char **argv)
         }
 
 
+        for (i = 0; i < comm_size; ++i) {
+            free(results[i]);
+        }
+        free(results);
         /* end for cycle .
          * Now we  go to the next length of message that is used in
          * the test perfomed on multiprocessor.
@@ -516,10 +510,6 @@ int main(int argc,char **argv)
      * Times array should be moved from return value to the input argument
      * for any network_test.
      */
-    for (i = 0; i < comm_size; ++i) {
-        free(results[i]);
-    }
-    free(results);
 	free(times);
 
 

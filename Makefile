@@ -19,7 +19,7 @@
 
 include ./config
 SHELL=/bin/bash
-GOALS = network_test java network_viewer_qt clustering
+GOALS = network_test 
 #INSTALL_DIR = .
 
 all: core $(GOALS) 

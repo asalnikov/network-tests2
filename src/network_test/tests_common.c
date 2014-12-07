@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
+#include "tests_common.h"
 #include "my_time.h"
 #include "types.h"
 
@@ -53,3 +55,36 @@ int create_test_hosts_file
 	return 0;
 }
 
+void 
+calculate_statistics(px_my_time_type **results, 
+                     Test_time_result_type *times, 
+                     int comm_size, int num_repeats)
+{
+    int send_proc;
+    int itr;
+    px_my_time_type sum;
+    px_my_time_type st_dev;
+    px_my_time_type *buf = malloc(num_repeats * sizeof(*buf));
+
+    for (send_proc = 0; send_proc < comm_size; ++send_proc) {
+        sum = 0;
+        for (itr = 0; itr < num_repeats; ++itr) {
+            sum += results[send_proc][itr];
+        }
+        times[send_proc].average = sum / (double)num_repeats;
+        st_dev = 0;
+        for (itr = 0; itr < num_repeats; ++itr) {
+            st_dev += (results[send_proc][itr] - times[send_proc].average) *
+                      (results[send_proc][itr] - times[send_proc].average); 
+        }
+        st_dev /= (double)num_repeats;
+        times[send_proc].deviation = sqrt(st_dev);
+
+        memcpy(buf, results[send_proc], sizeof(*buf) * num_repeats);
+        qsort(buf, num_repeats, sizeof(*buf), my_time_cmp);
+        times[send_proc].median = buf[num_repeats / 2];
+        times[send_proc].min = buf[0];
+    }
+
+    free(buf);
+}
