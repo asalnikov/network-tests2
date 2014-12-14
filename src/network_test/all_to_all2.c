@@ -30,12 +30,56 @@
 #include <math.h>
 #include <mpi.h>
 
+#ifdef MODULES_SUPPORT
+int comm_rank;
+int comm_size;
+#else
 extern int comm_rank;
 extern int comm_size;
+#endif
 
-int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_length, int num_repeats);
+int all_to_all(px_my_time_type **results, int mes_length, int num_repeats);
 
-int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_length, int num_repeats)
+#ifdef MODULES_SUPPORT
+void *parse_args(int argc, char **argv);
+void run(px_my_time_type **results, int ms, int nrep, void *add_params);
+void print_test_description();
+void print_params_description();
+void params_free(void *add_params);
+
+void *
+parse_args(int argc, char **argv)
+{
+    return (void *)NULL;
+}
+
+void 
+run(px_my_time_type **results, int ms, int nrep, void *add_params)
+{
+    MPI_Comm_size(MPI_COMM_WORLD,&comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD,&comm_rank);
+    all_to_all(results, ms, nrep);
+}
+
+void
+print_test_description()
+{
+    printf("all_to_all - is a test that translate data simulteniously to"
+           "all other processes.");
+}
+
+void
+print_params_description()
+{
+}
+
+void
+params_free(void *add_params)
+{
+}
+#endif
+
+int all_to_all(px_my_time_type **results, int mes_length, int num_repeats)
 {
     px_my_time_type time_beg,time_end;
     char **send_data=NULL;
@@ -53,21 +97,18 @@ int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_
     send_request=(MPI_Request *)malloc(comm_size*sizeof(MPI_Request));
     if(send_request == NULL)
     {
-        free(times);
         return -1;
     }
 
     recv_request=(MPI_Request *)malloc(comm_size*sizeof(MPI_Request));
     if(recv_request == NULL)
     {
-        free(times);
         free(send_request);
         return -1;
     }
     send_data=(char **)malloc(sizeof(char *)*comm_size);
     if(send_data == NULL)
     {
-        free(times);
         free(send_request);
         free(recv_request);
         return -1;
@@ -75,7 +116,6 @@ int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_
     recv_data=(char **)malloc(sizeof(char *)*comm_size);
     if(recv_data == NULL)
     {
-        free(times);
         free(send_request);
         free(recv_request);
         free(send_data);
@@ -103,7 +143,6 @@ int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_
 
     if(flag == 1)
     {
-        free(times);
         free(send_request);
         free(recv_request);
         for(i=0; i<comm_size; i++)
@@ -151,31 +190,6 @@ int all_to_all(px_my_time_type **results, Test_time_result_type *times, int mes_
             time_end=px_my_cpu_time();
             results[finished][i]=time_end-time_beg;
         }
-    }
-
-    for(i=0; i<comm_size; i++)
-    {
-        sum=0;
-        for(j=0; j<num_repeats; j++)
-        {
-            sum+=results[i][j];
-        }
-        times[i].average=sum/(double)num_repeats;
-
-        st_deviation=0;
-        for(j=0; j<num_repeats; j++)
-        {
-            st_deviation+=(results[i][j]-times[i].average)*(results[i][j]-times[i].average);
-        }
-        st_deviation/=(double)(num_repeats);
-        times[i].deviation=sqrt(st_deviation);
-
-        qsort(results[i], num_repeats, sizeof(px_my_time_type), my_time_cmp );
-        times[i].median=results[i][num_repeats/2];
-
-        times[i].min=results[i][0];
-
-
     }
 
     free(send_request);

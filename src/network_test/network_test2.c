@@ -39,6 +39,9 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#ifdef MODULES_SUPPORT
+#include <dlfcn.h>
+#endif
 
 #ifdef _GNU_SOURCE
 #include <getopt.h>
@@ -62,9 +65,18 @@ int comm_size;
 int comm_rank;
 
 
-
 int main(int argc,char **argv)
 {
+#ifdef MODULES_SUPPORT
+    void *module_handle;
+    void *module_params;
+    void *(*module_parse_args)(int, char **);
+    void (*module_run)(px_my_time_type **, int, int, void *);
+    void (*module_description)();
+    void (*module_free_params)(void *);
+    void (*module_params_description)();
+#endif
+
     MPI_Status status;
 
     px_my_time_type **results = NULL;
@@ -157,7 +169,6 @@ int main(int argc,char **argv)
         }
 
         if(parse_network_test_arguments(argc,argv,&test_parameters))
-
         {
             MPI_Abort(MPI_COMM_WORLD,-1);
             return -1;
@@ -274,20 +285,74 @@ int main(int argc,char **argv)
     		return -1;
 	}
 
+
+#ifdef MODULES_SUPPORT
+    if (strlen(test_parameters.module_name) == 0) {
+        printf("Specify name of the module.");
+        MPI_Abort(MPI_COMM_WORLD, -1);
+        return -1;
+    }
+
+    char *module_filename = calloc(sizeof(char), MAX_MODULE_NAME + 10 + 3);
+    strcat(module_filename, "./modules/");
+    strncat(module_filename, test_parameters.module_name, 255);
+    strcat(module_filename, ".so");
+
+    module_handle = dlopen(module_filename, RTLD_NOW);
+    free(module_filename);
+    if (module_handle == NULL) {
+        fprintf(stderr, "Can't open module file\n");
+        MPI_Abort(MPI_COMM_WORLD,-1);
+        return -1;
+    }
+
+    module_parse_args = dlsym(module_handle, "parse_args");
+    module_free_params = dlsym(module_handle, "params_free");
+    module_run = dlsym(module_handle, "run");
+    module_description = dlsym(module_handle, "print_test_description");
+    module_params_description = dlsym(module_handle, "print_params_description");
+
+    if (!module_run || !module_description || !module_params_description ||
+        !module_description || !module_free_params) {
+        fprintf(stderr, "Invalid module format\n");
+        MPI_Abort(MPI_COMM_WORLD,-1);
+        return -1;
+    }
+
+    int module_argc = argc;
+    char **module_argv = argv;
+    while (module_argc > 0) {
+        if (!strcmp(*module_argv, "--")) {
+            module_argv++;
+            module_argc--;
+            break;
+        }
+        module_argv++;
+        module_argc--;
+    }
+    module_params = (*module_parse_args)(module_argc, module_argv);
+#endif
+
         /*
          *
          * Printing initial message for user
          *
          */
         printf("network test (%d processes):\n\n", comm_size);
+#ifdef MODULES_SUPPORT
+        printf("\tmodule name:\t\t\t\"%s\"\n", test_parameters.module_name);
+#else
         get_test_type_name(test_parameters.test_type,test_type_name);
         printf("\ttest type\t\t\t\"%s\"\n",test_type_name);
+#endif
         printf("\tbegin message length\t\t%d\n",test_parameters.begin_message_length);
         printf("\tend message length\t\t%d\n",test_parameters.end_message_length);
         printf("\tstep length\t\t\t%d\n",test_parameters.step_length);
+#ifndef MODULES_SUPPORT
         printf("\tnoise message length\t\t%d\n",test_parameters.noise_message_length);
         printf("\tnumber of noise messages\t%d\n",test_parameters.num_noise_messages);
         printf("\tnumber of noise processes\t%d\n",test_parameters.num_noise_procs);
+#endif
         printf("\tnumber of repeates\t\t%d\n",test_parameters.num_repeats);
         printf("\tresult file average\t\t\"%s_average.nc\"\n",test_parameters.file_name_prefix);
         printf("\tresult file median\t\t\"%s_median.nc\"\n",test_parameters.file_name_prefix);
@@ -298,6 +363,10 @@ int main(int argc,char **argv)
 
     } /* End preparation (only in MPI process with rank 0) */
 
+#ifdef MODULES_SUPPORT
+    MPI_Bcast(&test_parameters,6,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(test_parameters.module_name,256,MPI_CHAR,0,MPI_COMM_WORLD);
+#else
     /*
      * Broadcasting command line parametrs
      *
@@ -308,6 +377,49 @@ int main(int argc,char **argv)
      * Little hack from Alexey Salnikov.
      */
     MPI_Bcast(&test_parameters,9,MPI_INT,0,MPI_COMM_WORLD);
+#endif
+
+#ifdef MODULES_SUPPORT
+    char *module_filename = calloc(sizeof(char), MAX_MODULE_NAME + 10 + 3);
+    strcat(module_filename, "./modules/");
+    strncat(module_filename, test_parameters.module_name, 255);
+    strcat(module_filename, ".so");
+
+    module_handle = dlopen(module_filename, RTLD_NOW);
+    free(module_filename);
+    if (module_handle == NULL) {
+        fprintf(stderr, "Can't open module file\n");
+        MPI_Abort(MPI_COMM_WORLD,-1);
+        return -1;
+    }
+
+    module_parse_args = dlsym(module_handle, "parse_args");
+    module_free_params = dlsym(module_handle, "params_free");
+    module_run = dlsym(module_handle, "run");
+    module_description = dlsym(module_handle, "print_test_description");
+    module_params_description = dlsym(module_handle, "print_params_description");
+
+    if (!module_run || !module_description || !module_params_description ||
+        !module_description || !module_free_params) {
+        fprintf(stderr, "Invalid module format\n");
+        MPI_Abort(MPI_COMM_WORLD,-1);
+        return -1;
+    }
+
+    int module_argc = argc;
+    char **module_argv = argv;
+    while (module_argc > 0) {
+        if (!strcmp(*module_argv, "--")) {
+            module_argv++;
+            module_argc--;
+            break;
+        }
+        module_argv++;
+        module_argc--;
+    }
+    module_params = (*module_parse_args)(module_argc, module_argv);
+#endif
+
 
 
     /*
@@ -357,7 +469,9 @@ int main(int argc,char **argv)
             results[i] = (px_my_time_type *)malloc(test_parameters.num_repeats * sizeof(*results[i]));
         }
 
-#ifndef MODULES_SUPPORTING
+#ifdef MODULES_SUPPORT
+        (*module_run)(results, tmp_mes_size, test_parameters.num_repeats, module_params);
+#else /* MODULES_SUPPORT */
         switch (test_parameters.test_type) {
             case ALL_TO_ALL_TEST_TYPE:
                 all_to_all(results, times, tmp_mes_size, test_parameters.num_repeats);
@@ -366,7 +480,7 @@ int main(int argc,char **argv)
                 bcast(results, times, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case ONE_TO_ONE_TEST_TYPE:
-                one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                one_to_one(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case ASYNC_ONE_TO_ONE_TEST_TYPE:
                 async_one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
@@ -403,7 +517,7 @@ int main(int argc,char **argv)
     			);
                 break;
         }
-#endif
+#endif /* MODULES_SUPPORT */
 
         calculate_statistics(results, times, comm_size, test_parameters.num_repeats);
         MPI_Barrier(MPI_COMM_WORLD);
@@ -502,6 +616,11 @@ int main(int argc,char **argv)
          * the test perfomed on multiprocessor.
          */
     }
+
+#ifdef MODULES_SUPPORT
+    module_free_params(module_params);
+    dlclose(module_handle);
+#endif
 
     /* TODO
      * Now free times array.

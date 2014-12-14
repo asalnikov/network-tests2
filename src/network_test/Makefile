@@ -25,6 +25,8 @@
 
 include ../../config
 
+MODULES_SUPPORT=TRUE
+
 FILES_COMMON=\
 	tests_common.o
 
@@ -38,12 +40,25 @@ FILES_TEST2=\
 	test_noise2.o\
 	test_noise_blocking2.o\
 	bcast2.o\
-    	get2.o\
-    	put2.o\
+	get2.o\
+	put2.o\
+	parse_arguments.o
+
+FILES_MODULES=\
+	one_to_one2.so\
+	all_to_all2.so
+
+FILES_NT=\
+	network_test2.o\
 	parse_arguments.o
 
 FILES_PRINT_FROM_TO=\
 	print_from_to.o
+
+MODULES_FLAG=
+ifeq ($(MODULES_SUPPORT), TRUE)
+	MODULES_FLAG+=-DMODULES_SUPPORT -O0
+endif
 
 	
                
@@ -51,8 +66,13 @@ EXECS= print_from_to convert_to_netcdf network_test2
 
 all: $(EXECS)
 
+ifeq ($(MODULES_SUPPORT), TRUE)
+network_test2: $(FILES_MODULES) $(FILES_COMMON) $(FILES_NT)
+	$(MPI_CLINKER) $(MPI_CLINKER_FLAGS) $(MPI_LIB_PATH) $(NETCDF_INCLUDE) -L ../core -o network_test2 $(FILES_NT) $(FILES_COMMON) $(MPI_LIBS) -lparus_network  -lnetcdf -lm -ldl
+else
 network_test2: $(FILES_TEST2) $(FILES_COMMON)
 	$(MPI_CLINKER) $(MPI_CLINKER_FLAGS) $(MPI_LIB_PATH) $(NETCDF_INCLUDE) -L ../core -o network_test2 $(FILES_COMMON) $(FILES_TEST2) $(MPI_LIBS) -lparus_network  -lnetcdf -lm
+endif
 
 
 print_from_to: $(FILES_PRINT_FROM_TO)
@@ -64,15 +84,26 @@ convert_to_netcdf: convert_to_netcdf.o $(FILES_COMMON)
 
 clean:
 	rm  -f ./*.o
+	rm  -f ./*.so
 	rm  -f $(EXECS)
 
+ifeq ($(MODULES_SUPPORT), TRUE)
 install: all
 	cp -rf $(EXECS) $(INSTALL_DIR)/bin/
+	mkdir $(INSTALL_DIR)/bin/modules
+	cp -rf $(FILES_MODULES) $(INSTALL_DIR)/bin/modules	
+else
+install: all
+	cp -rf $(EXECS) $(INSTALL_DIR)/bin/
+endif
+
+%.so: %.c
+	$(MPI_cc) -c -fPIC $(MODULES_FLAG) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) -I ../core -I ../.. $^ -o $(^:.c=.o)
+	$(MPI_CCLINKER) -shared -fPIC $(MPI_CCLINKER_FLAGS) $(MPI_LIB_PATH) -L ../core $(^:.c=.o) -o $@  -lparus_network_pic
 
 %.o: %.c
-	$(MPI_cc) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) -I ../core -I ../.. -c $^ -o $@ 
-
+	$(MPI_cc) $(MODULES_FLAG) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) -I ../core -I ../.. -c $^ -o $@ 
    
 %.o: %.cpp
-	$(MPI_CC) $(MPI_CC_FLAGS) $(MPI_CC_INCLUDE) -I ../core -I ../.. -c $^ -o $@
+	$(MPI_CC) $(MODULES_FLAG) $(MPI_CC_FLAGS) $(MPI_CC_INCLUDE) -I ../core -I ../.. -c $^ -o $@
 

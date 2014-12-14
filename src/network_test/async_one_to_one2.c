@@ -30,9 +30,13 @@
 #include "tests_common.h"
 
 
+#ifdef MODULES_SUPPORT
+int comm_size;
+int comm_rank;
+#else
 extern int comm_rank;
 extern int comm_size;
-
+#endif
 
 
 
@@ -44,7 +48,6 @@ Test_time_result_type real_async_one_to_one(px_my_time_type *results,
 
 
 Test_time_result_type* async_one_to_one(px_my_time_type **results,
-                                        Test_time_result_type *times,
                                         int mes_length,
                                         int num_repeats)
 {
@@ -280,3 +283,41 @@ Test_time_result_type real_async_one_to_one(px_my_time_type *results,
     }
 }
 
+#ifdef MODULES_SUPPORT
+void *parse_args(int argc, char **argv);
+void run(px_my_time_type **results, int ms, int nrep, void *add_params);
+void print_test_description();
+void print_params_description();
+void params_free(void *add_params);
+
+void *
+parse_args(int argc, char **argv)
+{
+    return (void *)NULL;
+}
+
+void 
+run(px_my_time_type **results, int ms, int nrep, void *add_params)
+{
+    MPI_Comm_size(MPI_COMM_WORLD,&comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD,&comm_rank);
+    all_to_all(results, ms, nrep);
+}
+
+void
+print_test_description()
+{
+    printf("all_to_all - is a test that translate data simulteniously to"
+           "all other processes.");
+}
+
+void
+print_params_description()
+{
+}
+
+void
+params_free(void *add_params)
+{
+}
+#endif
