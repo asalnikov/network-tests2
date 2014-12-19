@@ -323,8 +323,6 @@ int main(int argc,char **argv)
     char **module_argv = argv;
     while (module_argc > 0) {
         if (!strcmp(*module_argv, "--")) {
-            module_argv++;
-            module_argc--;
             break;
         }
         module_argv++;
@@ -474,30 +472,30 @@ int main(int argc,char **argv)
 #else /* MODULES_SUPPORT */
         switch (test_parameters.test_type) {
             case ALL_TO_ALL_TEST_TYPE:
-                all_to_all(results, times, tmp_mes_size, test_parameters.num_repeats);
+                all_to_all(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case BCAST_TEST_TYPE:
-                bcast(results, times, tmp_mes_size, test_parameters.num_repeats);
+                bcast(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case ONE_TO_ONE_TEST_TYPE:
                 one_to_one(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case ASYNC_ONE_TO_ONE_TEST_TYPE:
-                async_one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                async_one_to_one(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case SEND_RECV_AND_RECV_SEND_TEST_TYPE:
-                send_recv_and_recv_send(results, times, tmp_mes_size, test_parameters.num_repeats);
+                send_recv_and_recv_send(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case PUT_ONE_TO_ONE_TEST_TYPE:
-                put_one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                put_one_to_one(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case GET_ONE_TO_ONE_TEST_TYPE:
-                get_one_to_one(results, times, tmp_mes_size, test_parameters.num_repeats);
+                get_one_to_one(results, tmp_mes_size, test_parameters.num_repeats);
                 break;
             case NOISE_BLOCKING_TEST_TYPE:
                 test_noise_blocking
 		        (
-		 	        times,
+		 	        results,
 		    	    tmp_mes_size,
 			        test_parameters.num_repeats,
 			        test_parameters.num_noise_messages,
@@ -508,7 +506,7 @@ int main(int argc,char **argv)
             case NOISE_TEST_TYPE:
             	test_noise
 			    (
-    			 	times,
+    			 	results,
     				tmp_mes_size,
     				test_parameters.num_repeats,
     				test_parameters.num_noise_messages,

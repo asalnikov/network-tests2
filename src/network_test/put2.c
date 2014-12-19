@@ -28,19 +28,67 @@
 #include "my_malloc.h"
 #include "tests_common.h"
 
+#ifdef MODULES_SUPPORT
+int comm_rank;
+int comm_size;
+#else
 extern int comm_rank;
 extern int comm_size;
+#endif
 
-Test_time_result_type real_put_one_to_one(px_my_time_type *results, 
-                                          int mes_length,
-                                          int num_repeats,
-                                          int source_proc,
-                                          int dest_proc, 
-                                          MPI_Win *win);
+
+void real_put_one_to_one(px_my_time_type *results, 
+                         int mes_length,
+                         int num_repeats,
+                         int source_proc,
+                         int dest_proc, 
+                         MPI_Win *win);
+
+int put_one_to_one(px_my_time_type **results, 
+                   int mes_length,
+                   int num_repeats);
+
+
+#ifdef MODULES_SUPPORT
+void *parse_args(int argc, char **argv);
+void run(px_my_time_type **results, int ms, int nrep, void *add_params);
+void print_test_description();
+void print_params_description();
+void params_free(void *add_params);
+
+void *
+parse_args(int argc, char **argv)
+{
+    return (void *)NULL;
+}
+
+void 
+run(px_my_time_type **results, int ms, int nrep, void *add_params)
+{
+    MPI_Comm_size(MPI_COMM_WORLD,&comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD,&comm_rank);
+    put_one_to_one(results, ms, nrep);
+}
+
+void
+print_test_description()
+{
+    printf("put2 - MPI_Put function testing.");
+}
+
+void
+print_params_description()
+{
+}
+
+void
+params_free(void *add_params)
+{
+}
+#endif
 
 
 int put_one_to_one(px_my_time_type **results, 
-                   Test_time_result_type *times,
                    int mes_length,
                    int num_repeats)
 {
@@ -87,12 +135,12 @@ int put_one_to_one(px_my_time_type **results,
 
             if(send_proc==0)
             {
-                times[recv_proc]=real_put_one_to_one(results[recv_proc], 
-                                                     mes_length,
-                                                     num_repeats,
-                                                     send_proc,
-                                                     recv_proc,
-                                                     &win);
+                real_put_one_to_one(results[recv_proc], 
+                                    mes_length,
+                                    num_repeats,
+                                    send_proc,
+                                    recv_proc,
+                                    &win);
             }
 
             if(send_proc)
@@ -121,12 +169,12 @@ int put_one_to_one(px_my_time_type **results,
             if(send_proc==-1)
                 break;
             if(send_proc==comm_rank)
-                times[recv_proc]=real_put_one_to_one(results[recv_proc],
-                                                     mes_length,
-                                                     num_repeats,
-                                                     send_proc,
-                                                     recv_proc,
-                                                     &win);
+                real_put_one_to_one(results[recv_proc],
+                                    mes_length,
+                                    num_repeats,
+                                    send_proc,
+                                    recv_proc,
+                                    &win);
 
             confirmation_flag=1;
             MPI_Send(&confirmation_flag,1,MPI_INT,0,1,MPI_COMM_WORLD);
@@ -139,30 +187,25 @@ int put_one_to_one(px_my_time_type **results,
     return 0;
 }
 
-Test_time_result_type real_put_one_to_one(px_my_time_type *results,
-                                          int mes_length,
-                                          int num_repeats,
-                                          int source_proc,
-                                          int dest_proc, 
-                                          MPI_Win *win)
+void real_put_one_to_one(px_my_time_type *results,
+                         int mes_length,
+                         int num_repeats,
+                         int source_proc,
+                         int dest_proc, 
+                         MPI_Win *win)
 {
     px_my_time_type time_beg,time_end;
     char *data=NULL;
     int i;
     px_my_time_type sum;
-    Test_time_result_type  times;
-
     px_my_time_type st_deviation;
-
-
 
 
     if(source_proc==dest_proc)
     {
-        times.average=0;
-        times.deviation=0;
-        times.median=0;
-        return times;
+        for (i = 0; i < num_repeats; ++i)
+            results[i] = 0;
+        return;
     }
 
     data=(char *)malloc(mes_length*sizeof(char));
@@ -170,8 +213,7 @@ Test_time_result_type real_put_one_to_one(px_my_time_type *results,
     if(data==NULL)
     {
         printf("proc %d from %d: Can not allocate memory\n",comm_rank,comm_size);
-        times.average=-1;
-        return times;
+        return;
     }
 
 
@@ -196,34 +238,6 @@ Test_time_result_type real_put_one_to_one(px_my_time_type *results,
         }
     }
 
-    sum=0;
-    for(i=0; i<num_repeats; i++)
-    {
-        sum+=results[i];
-    }
-    times.average=(sum/(double)num_repeats);
-
-    st_deviation=0;
-    for(i=0; i<num_repeats; i++)
-    {
-        st_deviation+=(results[i]-times.average)*(results[i]-times.average);
-    }
-    st_deviation/=(double)(num_repeats);
-    times.deviation=sqrt(st_deviation);
-
-    qsort(results, num_repeats, sizeof(px_my_time_type), my_time_cmp );
-    times.median=results[num_repeats/2];
-
-    times.min=results[0];
-
     free(data);
-
-    if((comm_rank==source_proc)||(comm_rank==dest_proc)) return times;
-    else
-    {
-        times.average=-1;
-        times.min=0;
-        return times;
-    }
 }
 

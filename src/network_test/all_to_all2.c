@@ -64,7 +64,7 @@ run(px_my_time_type **results, int ms, int nrep, void *add_params)
 void
 print_test_description()
 {
-    printf("all_to_all - is a test that translate data simulteniously to"
+    printf("all_to_all2 - is a test that translate data simulteniously to "
            "all other processes.");
 }
 

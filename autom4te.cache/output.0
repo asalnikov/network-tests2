@@ -642,6 +642,7 @@ CPPFLAGS
 LDFLAGS
 CXXFLAGS
 CXX
+MODULES_SUPPORT
 MPI_LDFLAGS
 MPI_LIBS
 MPI_CXXFLAGS
@@ -693,6 +694,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_java_gui
+enable_modules
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1326,6 +1328,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-java-gui       Enable Java version of network-viewer program. It is
                           disabled by default.
+  --disable-modules       Disable modules support (enabled by default)
 
 Some influential environment variables:
   JAVAC       Place where javac is installed
@@ -2246,6 +2249,19 @@ else
              
 fi
 
+
+@%:@ Check whether --enable-modules was given.
+if test "${enable_modules+set}" = set; then :
+  enableval=$enable_modules; 
+fi
+
+if test "$enable_modules" = "no"; then
+    MODULES_SUPPORT=FALSE
+   
+else
+    MODULES_SUPPORT=TRUE
+   
+fi
 
 
 if test "x$JAVAC" = "x" ; then

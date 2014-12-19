@@ -29,19 +29,60 @@
 #include "my_malloc.h"
 #include "tests_common.h"
 
-
+#ifdef MODULES_SUPPORT
+int comm_rank;
+int comm_size;
+#else
 extern int comm_rank;
 extern int comm_size;
+#endif
 
-Test_time_result_type *bcast(px_my_time_type **results, 
-                             Test_time_result_type *times, 
-                             int mes_length, 
-                             int num_repeats);
+void bcast(px_my_time_type **results, 
+           int mes_length, 
+           int num_repeats);
 
-Test_time_result_type *bcast(px_my_time_type **results,
-                             Test_time_result_type *times, 
-                             int mes_length, 
-                             int num_repeats)
+
+#ifdef MODULES_SUPPORT
+void *parse_args(int argc, char **argv);
+void run(px_my_time_type **results, int ms, int nrep, void *add_params);
+void print_test_description();
+void print_params_description();
+void params_free(void *add_params);
+
+void *
+parse_args(int argc, char **argv)
+{
+    return (void *)NULL;
+}
+
+void
+run(px_my_time_type **results, int ms, int nrep, void *add_params)
+{
+    MPI_Comm_size(MPI_COMM_WORLD,&comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD,&comm_rank);
+    bcast(results, ms, nrep);
+}
+
+void
+print_test_description()
+{
+    printf("bcast2 - is a test with broadcast messages.");
+}
+
+void
+print_params_description()
+{
+}
+
+void
+params_free(void *add_params)
+{
+}
+#endif
+
+void bcast(px_my_time_type **results,
+            int mes_length, 
+            int num_repeats)
 {
     px_my_time_type time_beg,time_end;
     char *data=NULL;
@@ -54,8 +95,7 @@ Test_time_result_type *bcast(px_my_time_type **results,
     data=(char *)malloc(mes_length*sizeof(char));
     if(data == NULL)
     {
-        free(times);
-        return NULL;
+        return; 
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -88,32 +128,5 @@ Test_time_result_type *bcast(px_my_time_type **results,
 
          }*/
     }
-
-    for(i=0; i<comm_size; i++)
-    {
-        sum=0;
-        for(j=0; j<num_repeats; j++)
-        {
-            sum+=results[i][j];
-        }
-        times[i].average=sum/(double)num_repeats;
-
-        st_deviation=0;
-        for(j=0; j<num_repeats; j++)
-        {
-            st_deviation+=(results[i][j]-times[i].average)*(results[i][j]-times[i].average);
-        }
-        st_deviation/=(double)(num_repeats);
-        times[i].deviation=sqrt(st_deviation);
-
-        qsort(results[i], num_repeats, sizeof(px_my_time_type), my_time_cmp );
-        times[i].median=results[i][num_repeats/2];
-
-        times[i].min=results[i][0];
-
-
-    }
     free(data);
-
-    return times;
 }

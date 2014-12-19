@@ -25,8 +25,6 @@
 
 include ../../config
 
-MODULES_SUPPORT=TRUE
-
 FILES_COMMON=\
 	tests_common.o
 
@@ -46,7 +44,14 @@ FILES_TEST2=\
 
 FILES_MODULES=\
 	one_to_one2.so\
-	all_to_all2.so
+	all_to_all2.so\
+	async_one_to_one2.so\
+	bcast2.so\
+	get2.so\
+	put2.so\
+	send_recv_and_recv_send2.so\
+	test_noise2.so\
+	test_noise_blocking2.so
 
 FILES_NT=\
 	network_test2.o\
@@ -69,6 +74,17 @@ all: $(EXECS)
 ifeq ($(MODULES_SUPPORT), TRUE)
 network_test2: $(FILES_MODULES) $(FILES_COMMON) $(FILES_NT)
 	$(MPI_CLINKER) $(MPI_CLINKER_FLAGS) $(MPI_LIB_PATH) $(NETCDF_INCLUDE) -L ../core -o network_test2 $(FILES_NT) $(FILES_COMMON) $(MPI_LIBS) -lparus_network  -lnetcdf -lm -ldl
+
+test_noise2.so: test_noise2.c test_noise_common.o
+	$(MPI_cc) -c -fPIC $(MODULES_FLAG) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) -I ../core -I ../.. test_noise2.c -o test_noise2.o 
+	$(MPI_CCLINKER) -shared -fPIC $(MPI_CCLINKER_FLAGS) $(MPI_LIB_PATH) -L ../core test_noise2.o test_noise_common.o -o $@  -lparus_network_pic
+
+test_noise_blocking2.so: test_noise_blocking2.c test_noise_common.o
+	$(MPI_cc) -c -fPIC $(MODULES_FLAG) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) -I ../core -I ../.. test_noise_blocking2.c -o test_noise_blocking2.o 
+	$(MPI_CCLINKER) -shared -fPIC $(MPI_CCLINKER_FLAGS) $(MPI_LIB_PATH) -L ../core test_noise_blocking2.o test_noise_common.o -o $@  -lparus_network_pic
+
+test_noise_common.o: test_noise_common.c
+	$(MPI_cc) -c -fPIC $(MODULES_FLAG) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) -I ../core -I ../.. test_noise_common.c -o test_noise_common.o 
 else
 network_test2: $(FILES_TEST2) $(FILES_COMMON)
 	$(MPI_CLINKER) $(MPI_CLINKER_FLAGS) $(MPI_LIB_PATH) $(NETCDF_INCLUDE) -L ../core -o network_test2 $(FILES_COMMON) $(FILES_TEST2) $(MPI_LIBS) -lparus_network  -lnetcdf -lm

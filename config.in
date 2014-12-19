@@ -33,6 +33,7 @@ LIBS=
 ANT=@ANT@
 JAVAC=@JAVAC@
 JAR=@JAR@
+MODULES_SUPPORT=@MODULES_SUPPORT@
 
 # full path to 'CL/opencl.h' (on Windows/UNIX) or 'OpenCL/opencl.h' (on Mac)
 # (WITHOUT 'CL/opencl.h' or 'OpenCL/opencl.h'!)

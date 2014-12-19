@@ -173,7 +173,6 @@ int print_network_test_help_message(void)
         char *module_filename = calloc(sizeof(char), MAX_MODULE_NAME + 10 + 3);
         strcat(module_filename, "./modules/");
         strncat(module_filename, fname, 258);
-        printf("%s\n", module_filename);
 
         void *module_handle = dlopen(module_filename, RTLD_NOW);
         if (module_handle == NULL) {
@@ -200,7 +199,9 @@ int print_network_test_help_message(void)
         }
         
         (*module_description)();
+        printf("\nParameters:\n");
         (*module_params_description)();
+        printf("\n");
     }
 #endif /* MODULES_SUPPORT */
     return 0;

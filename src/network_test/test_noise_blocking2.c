@@ -30,16 +30,130 @@
 #include <mpi.h>
 #include <time.h>
 
+#ifdef _GNU_SOURCE
+#include <getopt.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "test_noise_common.h"
 #include "tests_common.h"
+#include "my_time.h"
 
+#define NOISE_MESSAGE_LENGTH 0
+#define NOISE_MESSAGE_NUM 1
+#define NUM_NOISE_PROCS 0
 
 extern test_data td;
+
+#ifdef MODULES_SUPPORT
+int test_noise_blocking(px_my_time_type **results, int mes_length, int num_repeats, int num_noise_repeats, int loading, int num_noise_procs );
+
+struct Noise_Params {
+    int num_noise_repeats;
+    int noise_length;
+    int num_noise_procs;
+};
+
+void *parse_args(int argc, char **argv);
+void run(px_my_time_type **results, int ms, int nrep, void *add_params);
+void print_test_description();
+void print_params_description();
+void params_free(void *add_params);
+
+void *
+parse_args(int argc, char **argv)
+{
+    int arg_val;
+    struct Noise_Params *p = malloc(sizeof(*p));
+    p->num_noise_repeats = NOISE_MESSAGE_NUM;
+    p->noise_length = NOISE_MESSAGE_LENGTH;
+    p->num_noise_procs = NUM_NOISE_PROCS;
+
+    int state = -1;
+    while (argc > 0) {
+        if (state != -1) {
+            switch (state) {
+            case 0:
+                p->noise_length = atoi(*argv);
+                break;
+            case 1:
+                p->num_noise_repeats = atoi(*argv);
+                break;
+            case 2:
+                p->num_noise_procs = atoi(*argv);
+                break;
+            }
+            state = -1;
+        } else if (!strcmp(*argv, "-l")) {
+            state = 0;
+        } else if (!strcmp(*argv, "-m")) {
+            state = 1;
+        } else if (!strcmp(*argv, "-p")) {
+            state = 2;
+        } else {
+            state = -1;
+        }
+        argc--;
+        argv++;
+    }
+
+    MPI_Comm_size(MPI_COMM_WORLD,&comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD,&comm_rank);
+
+    if (comm_rank == 0) {
+        printf("Noise test parameters:\n");
+        printf("\tnoise message length: %d\n",p->noise_length);
+        printf("\tnumber of noise messages: %d\n",p->num_noise_repeats);
+        printf("\tnumber of noise processes: %d\n",p->num_noise_procs);
+    }
+
+    return (void *)p;
+}
+
+void 
+run(px_my_time_type **results, int ms, int nrep, void *add_params)
+{
+    struct Noise_Params *params = (struct Noise_Params *) add_params;    
+
+    MPI_Comm_size(MPI_COMM_WORLD,&comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD,&comm_rank);
+    test_noise_blocking(results, ms, nrep, params->num_noise_repeats,
+               params->noise_length, params->num_noise_procs);
+}
+
+void
+print_test_description()
+{
+    printf("noise2 - is a test where some processors generate noise."
+           " This test works like async_one_to_one test.");
+}
+
+void
+print_params_description()
+{
+    printf("\tlength_noise_message (-l)\t - sets a length of noise message in noise tests.\n"
+           "\t\tIf test type is not one of noise or noise_blocking this argument\n"
+           "\t\twill be ignored. The default value is '%d'.\n", (int)NOISE_MESSAGE_LENGTH);
+    printf("\tnum_noise_message (-m)\t - sets the number of noise messages in each interaction iteration in noise tests.\n"
+           "\t\tIf test type is not one of noise or noise_blocking this argument\n"
+           "\t\twill be ignored. The default value is '%d'.\n", (int)NOISE_MESSAGE_NUM);
+    printf("\tprocs_noise (-p)\t\t - number of noise processors in noise tests.\n"
+           "\t\tIf test type is not one of noise or noise_blocking this argument\n"
+           "\t\twill be ignored. The default value is '%d'.\n", (int)NUM_NOISE_PROCS);
+}
+
+void
+params_free(void *add_params)
+{
+    free((struct Noise_Params *)add_params);
+}
+#endif
 
 /*
  * Test main function
  */
-int test_noise_blocking(Test_time_result_type *times, int mes_length, int num_repeats, int num_noise_repeats, int loading, int num_noise_procs )
+int test_noise_blocking(px_my_time_type **results, int mes_length, int num_repeats, int num_noise_repeats, int loading, int num_noise_procs )
 {
 	int* mode_array=NULL;
 	init_test_data( &td );
@@ -54,8 +168,6 @@ int test_noise_blocking(Test_time_result_type *times, int mes_length, int num_re
 
 	int i, j, k, l;
 	px_my_time_type time_beg,time_end;
-	px_my_time_type sum;
-	px_my_time_type st_deviation;
 	
 	int flag;
 	int work_flag=1;
@@ -307,36 +419,12 @@ int test_noise_blocking(Test_time_result_type *times, int mes_length, int num_re
 		} /* end while work_flag */ 	
 	}	/* end else if(comm_rank==0) */
 
-	/*
-	 * Averaging results
-	 */
 	for( i = 0; i < comm_size; i++ )
 	{
-		sum = 0;
 		for( j = 0; j < num_repeats; j++ )
 		{
-			sum += td.tmp_results[i][j];
+            results[i][j] = td.tmp_results[i][j];
 		}
-		times[i].average=(sum/(double)num_repeats);
- 			
- 		st_deviation=0;
- 		for(j=0;j<num_repeats;j++)
- 		{
-  		 	st_deviation+=(td.tmp_results[i][j]-times[i].average)*(td.tmp_results[i][j]-times[i].average);
-		}
- 		st_deviation/=(double)(num_repeats);
- 		times[i].deviation=sqrt(st_deviation);
- 		
-		/*
-		 *
-		 * Function my_time_cmp is described in the file  'network_test.h' and 
-		 * is implemented in the file 'network_test.cpp'.
-		 *
-		 */
- 		qsort(td.tmp_results[i], num_repeats, sizeof(px_my_time_type), my_time_cmp );
- 		times[i].median=td.tmp_results[i][num_repeats/2]; 	
- 		
- 		times[i].min=td.tmp_results[i][0]; 	
 	}
 
 	/*

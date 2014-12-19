@@ -71,8 +71,8 @@ run(px_my_time_type **results, int ms, int nrep, void *add_params)
 void
 print_test_description()
 {
-    printf("\t\t\tone_to_one - is a test that lock process when translate data\n"
-           "\t\t\t\tfrom one processor to other.\n");
+    printf("one_to_one2 - is a test that lock process when translate data"
+           "from one processor to other.");
 }
 
 void
