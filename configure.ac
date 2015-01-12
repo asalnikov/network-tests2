@@ -23,6 +23,13 @@ AC_ARG_ENABLE([java-gui],
               [JAVA_GUI=enabled]
              )
 
+AC_ARG_ENABLE([modules], [AS_HELP_STRING([--disable-modules],[Disable modules support (enabled by default)])])
+if test "$enable_modules" = "no"; then
+    AC_SUBST([MODULES_SUPPORT], [FALSE])   
+else
+    AC_SUBST([MODULES_SUPPORT], [TRUE])   
+fi
+
 
 if test "x$JAVAC" = "x" ; then
     AC_SUBST([JAVAC],[javac])

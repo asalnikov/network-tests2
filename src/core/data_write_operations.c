@@ -186,6 +186,7 @@ int create_netcdf_header
 		return NETCDF_ERROR;
 	}
 
+#ifndef MODULES_SUPPORT
 	if(nc_put_var_int(netcdf_file_id,noise_mesage_length_var_id,&test_parameters->noise_message_length)!=NC_NOERR)
 	{
 		return NETCDF_ERROR;
@@ -200,6 +201,7 @@ int create_netcdf_header
 	{
 		return NETCDF_ERROR;
 	}
+#endif
 
 	nc_sync(netcdf_file_id);
 	

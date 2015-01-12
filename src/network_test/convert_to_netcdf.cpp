@@ -76,9 +76,11 @@ int main(int argc, char** argv)
         test_parameters.begin_message_length = test_data.get_message_begin_length( );
         test_parameters.end_message_length = test_data.get_message_end_length( );
         test_parameters.step_length = test_data.get_step_length( );
+#ifndef MODULES_SUPPORT
         test_parameters.noise_message_length = test_data.get_noise_message_length( );
         test_parameters.num_noise_messages = test_data.get_noise_message_num( );
         test_parameters.num_noise_procs = test_data.get_number_of_noise_processors( );
+#endif
         test_parameters.num_repeats = test_data.get_number_of_repeates( );
         test_parameters.file_name_prefix=argv[2];
 

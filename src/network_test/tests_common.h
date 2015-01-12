@@ -63,6 +63,13 @@ extern "C"
 		 char **hosts_names
 	);
 
+    /* 
+     * Calculate statistics and store them in times array
+     */
+    extern void calculate_statistics(px_my_time_type **results,
+                                     Test_time_result_type *times,
+                                     int comm_size, int num_repeats);
+
 #ifdef __cplusplus
 }
 #endif

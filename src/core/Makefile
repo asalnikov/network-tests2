@@ -19,6 +19,11 @@
 
 include ../../config
 
+ifeq ($(MODULES_SUPPORT), TRUE)
+	MPI_cc_FLAGS+=-DMODULES_SUPPORT
+	MPI_CC_FLAGS+=-DMODULES_SUPPORT
+endif
+
 
 #FILES= demon.o edge_memory.o edge_data.o graph.o\
 #       runer.o linealge.o simple_list.o px_log_print.o to_processor.o\
@@ -39,9 +44,9 @@ FILES_COMMON=network_speed.o\
 	     easy_matrices.o\
 	     data_write_operations.o
 
+FILES_FOR_MODULES=$(FILES_COMMON:.o=_pic.o)
 
-              
-EXECS= libparus_network.a
+EXECS=libparus_network.a libparus_network_pic.a
 
 all: $(EXECS)
 #	$(CCLINKER) -shared $(FILES) $(LIB_FLAGS)
@@ -54,21 +59,27 @@ libparus_network.a: $(FILES_COMMON)
 	ar -r libparus_network.a $(FILES_COMMON)
 	ranlib libparus_network.a
 
+libparus_network_pic.a: $(FILES_FOR_MODULES)
+	ar -r libparus_network_pic.a $(FILES_FOR_MODULES)
+	ranlib libparus_network_pic.a
 
 install: libparus_network.a
 	cp -f *.h $(INSTALL_DIR)/include
 	cp -f line_dynamic_array.cpp $(INSTALL_DIR)/include
 	cp -f libparus_network.a $(INSTALL_DIR)/lib/libparus_network-$(PARUS_VERSION).a
+	cp -f libparus_network_pic.a $(INSTALL_DIR)/lib/libparus_network_pic-$(PARUS_VERSION).a
 	ln -s $(INSTALL_DIR)/lib/libparus_network-$(PARUS_VERSION).a $(INSTALL_DIR)/lib/libparus_network.a
 
 
 
 clean:
-	rm -f *.o libparus_network.a
+	rm -f *.o libparus_network.a libparus_network_pic.a
 
 .c.o:
-	 $(MPI_cc) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) $(NETCDF_INCLUDE) -I ../..  -c $*.c -o $*.o  
+	 $(MPI_cc) $(MODULES_FLAGS) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) $(NETCDF_INCLUDE) -I ../..  -c $*.c -o $*.o  
+	 $(MPI_cc) -fPIC $(MODULES_FLAGS) $(MPI_cc_FLAGS) $(MPI_cc_INCLUDE) $(NETCDF_INCLUDE) -I ../..  -c $*.c -o $*_pic.o  
 
    
 .cpp.o:
-	 $(MPI_CC) $(MPI_CC_FLAGS) $(MPI_CC_INCLUDE) $(NETCDF_INCLUDE) -I ../..  -c $*.cpp -o $*.o
+	 $(MPI_CC) $(MODULES_FLAGS) $(MPI_CC_FLAGS) $(MPI_CC_INCLUDE) $(NETCDF_INCLUDE) -I ../..  -c $*.cpp -o $*.o
+	 $(MPI_CC) -fPIC $(MODULES_FLAGS) $(MPI_CC_FLAGS) $(MPI_CC_INCLUDE) $(NETCDF_INCLUDE) -I ../..  -c $*.cpp -o $*_pic.o

@@ -4,9 +4,13 @@
 #include "my_time.h"
 #include "tests_common.h"
 
-
+#ifdef MODULES_SUPPORT
+int comm_rank;
+int comm_size;
+#else
 extern int comm_rank;
 extern int comm_size;
+#endif
 
 #define MODE_IDLE           0
 #define MODE_GOAL_MESSAGES  1

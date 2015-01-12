@@ -27,6 +27,20 @@
 /* typedef int long_long_int; */
 #define long_long_int int 
 
+#ifdef MODULES_SUPPORT
+#define MAX_MODULE_NAME 256
+struct network_test_parameters_struct
+{
+	int  num_procs;
+	int  test_type;
+	int  begin_message_length;
+	int  end_message_length;
+	int  step_length;
+	int  num_repeats;
+    char module_name[MAX_MODULE_NAME];
+	const char *file_name_prefix;
+};
+#else /* MODULES_SUPPURT */
 struct network_test_parameters_struct
 {
 	int  num_procs;
@@ -40,6 +54,7 @@ struct network_test_parameters_struct
 	int  num_noise_procs;
 	const char *file_name_prefix;
 };
+#endif /* MODULES_SUPPURT */
 
 
 #endif /* __MY_TYPES_H__ */
